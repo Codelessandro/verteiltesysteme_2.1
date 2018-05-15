@@ -1,19 +1,19 @@
-import java.io.Serializable;
-
-public class InternalMessage extends Message implements Serializable {
-    
-	private static final long serialVersionUID = 2329734168064135559L;
-	
+public class InternalMessage extends Message {
+    	
 	static int nextId = 0;
 	int nodeId;
-    int counter;
-    ExternalMessage externalMessage; //root message
+    ExternalMessage externalMessage;
 
     public InternalMessage(ExternalMessage externalMessage, int nodeId) {
         this.externalMessage = externalMessage;
         this.nodeId = nodeId;
-        counter = nextId;
+        messageId = nextId;
         nextId++;
+    }
+    
+    public String toString() {
+    	return "Internal Message with message Id: " + messageId + " and was sent by Thread: " + nodeId 
+    	   + " to the message sequencer, " + externalMessage.toString();
     }
 
 

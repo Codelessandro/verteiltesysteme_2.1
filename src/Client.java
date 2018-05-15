@@ -19,10 +19,9 @@ public class Client extends Thread {
     }
 
     public void sendMessage(ExternalMessage message) {
-    	System.out.println("external msg: " + message);
     	Node randomNode = this.getRandomNode();
         randomNode.insertMessage(message);
-        System.out.println("Client sent message to Node:" + randomNode.nodeId);
+        //System.out.println("Client sent message to Node:" + randomNode.nodeId);
 
     }
 

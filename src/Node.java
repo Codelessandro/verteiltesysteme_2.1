@@ -1,3 +1,4 @@
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -8,7 +9,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class Node extends Thread {
 	
-	static int nrIntMsg = 0;
+	int nrIntMsg = 0;
+	int nrExtMsg = 0;
     static int nodeCounter = 0;
     LinkedBlockingQueue<Message> inbox = new LinkedBlockingQueue<>();
     List<InternalMessage> history = new ArrayList<>();
@@ -25,7 +27,6 @@ public class Node extends Thread {
     public void forwardMessage(ExternalMessage externalMessage) {
         InternalMessage internalMessage = new InternalMessage(externalMessage, nodeId);
         this.messageSequencer.insertMessage(internalMessage);
-        System.out.println("Node: " + nodeId + " sent internal message to message sequencer");
 
     }
 
@@ -36,6 +37,7 @@ public class Node extends Thread {
         	history.add((InternalMessage) message);
         } else {
         	// only stores external messages sent by the client in the inbox
+        	nrExtMsg++;
         	try {
     			inbox.put(message);
     		} catch (InterruptedException e) {
@@ -54,30 +56,34 @@ public class Node extends Thread {
                 }
 
         }
+        System.out.println("int Msg=" + nrIntMsg);
+        System.out.println("ext Msg=" + nrExtMsg);
         log();
     }
     
     public void log() {
     	
     	if (!(history.size() == 1000)) {
-    		System.out.println("the node did not store 1000 messages in the history");
-    	} else if (!(inbox.size() == 1000)) {
-    		System.out.println("the node did not store 1000 messages in the inbox");
+    		System.err.println("the node did not store 1000 messages in the history");
     	}
     	
-    	try {
-    		FileOutputStream fileOut = new FileOutputStream("logs/" + nodeId);
-    		ObjectOutputStream out = new ObjectOutputStream(fileOut);
-    		Iterator<InternalMessage> iter = history.iterator();
-    		if (iter.hasNext()) {
-    			InternalMessage intMsg = iter.next();
-    			out.writeObject(intMsg);
-    		}
+    	File file = new File("logs/" + Thread.currentThread().getName());
+    	
+    	try (FileOutputStream fileOut = new FileOutputStream(file);
+    		 ObjectOutputStream out = new ObjectOutputStream(fileOut);) {
     		
-			
+    		Iterator<InternalMessage> iter = history.iterator();
+    		int msgCounter = 0;
+    		while (iter.hasNext()) {
+    			msgCounter++;
+    			InternalMessage intMsg = iter.next();
+    			out.writeBytes(msgCounter + ". message\n");
+    			out.writeBytes(intMsg.toString());
+    			out.writeBytes("\n\n");
+    		}	
 		} catch (IOException e) {
-			System.out.println("problem during writing the history in a log file");
 			e.printStackTrace();
+			System.out.println("problem during writing log messages into file");
 		}
     }
 }

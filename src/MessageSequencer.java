@@ -9,7 +9,7 @@ public class MessageSequencer extends Thread {
 
 
     public void insertMessage(InternalMessage internalMessage) {
-        synchronized (this) { //vielleicht nicht performant?
+        synchronized (this) {
             try {
                 this.inbox.put(internalMessage);
             } catch (InterruptedException e) {
@@ -22,13 +22,14 @@ public class MessageSequencer extends Thread {
     public void broadCast(InternalMessage internalMessage) {
         Arrays.stream(nodeList).forEach( e -> {
         	e.insertMessage(internalMessage);
-        	System.out.println("Message sequencer broadcastet message to node: " + e.nodeId);
+        	// System.out.println("Message sequencer broadcastet message to node: " + e.nodeId);
         } );
         
     }
 
     public void run() {
         while (!isInterrupted()) {
+        	
         	if (inbox.peek() != null) {
         		InternalMessage headMessage = this.inbox.poll();
                 this.broadCast(headMessage);

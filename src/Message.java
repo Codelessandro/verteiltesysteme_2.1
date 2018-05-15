@@ -1,2 +1,4 @@
 abstract class Message  {
+	
+	
 }

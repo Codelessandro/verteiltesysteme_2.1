@@ -1,30 +1,39 @@
 import java.util.Arrays;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class MessageSequencer extends Thread {
-    LinkedBlockingDeque<InternalMessage> inbox = new LinkedBlockingDeque()<>;
+	
+    LinkedBlockingQueue<InternalMessage> inbox = new LinkedBlockingQueue<>();
     Node[] nodeList;
 
 
     public void insertMessage(InternalMessage internalMessage) {
-        synchronized (this ) { //vielleicht nicht performant?
+        synchronized (this) { //vielleicht nicht performant?
             try {
                 this.inbox.put(internalMessage);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-
-            InternalMessage headMessage = this.inbox.poll();
-            this.broadCast(internalMessage);
         }
 
     }
 
     public void broadCast(InternalMessage internalMessage) {
-        Arrays.stream(nodeList).forEach( e -> e.insertMessage(internalMessage) );
+        Arrays.stream(nodeList).forEach( e -> {
+        	e.insertMessage(internalMessage);
+        	System.out.println("Message sequencer broadcastet message to node: " + e.nodeId);
+        } );
+        
     }
 
     public void run() {
-        //
+        while (!isInterrupted()) {
+        	if (inbox.peek() != null) {
+        		InternalMessage headMessage = this.inbox.poll();
+                this.broadCast(headMessage);
+        	}
+        	
+        }
     }
 }

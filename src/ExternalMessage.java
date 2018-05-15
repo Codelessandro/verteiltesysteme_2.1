@@ -1,11 +1,15 @@
+import java.io.Serializable;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class ExternalMessage extends Message {
-    int randomInt;
+public class ExternalMessage extends Message implements Serializable {
+    
+	private static final long serialVersionUID = -8460080396776188730L;
+	
+	int randomInt;
     int messageID;
 
-    public ExternalMessage(int i) {
-        this.messageID = i;
+    public ExternalMessage(int id) {
+        this.messageID = id;
         this.randomInt = ThreadLocalRandom.current().nextInt(0, 99 + 1);
     }
 

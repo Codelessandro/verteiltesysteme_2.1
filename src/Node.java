@@ -32,12 +32,7 @@ public class Node extends Thread {
 
     public void insertMessage(Message message) {
         // only internal messages sent by the message sequencer are stored in the history
-    	if (message instanceof InternalMessage) {
-    		nrIntMsg++;
-        	history.add((InternalMessage) message);
-        } else {
-        	// only stores external messages sent by the client in the inbox
-        	nrExtMsg++;
+    	
         	try {
     			inbox.put(message);
     		} catch (InterruptedException e) {
@@ -45,17 +40,24 @@ public class Node extends Thread {
     					+ e.getMessage());
     			e.printStackTrace();
     		}
-        }
+        
     }
 
     public void run() {
         while (!isInterrupted()) {
                 Message message = this.inbox.poll();
                 if (message != null) {
-                    this.forwardMessage((ExternalMessage) message);
+                	if (message instanceof InternalMessage) {
+                		nrIntMsg++;
+                    	history.add((InternalMessage) message);
+                    } else {
+                    	// only stores external messages sent by the client in the inbox
+                    	nrExtMsg++;
+                    	this.forwardMessage((ExternalMessage) message);
+                    }
                 }
-
         }
+        
         System.out.println("int Msg=" + nrIntMsg);
         System.out.println("ext Msg=" + nrExtMsg);
         log();

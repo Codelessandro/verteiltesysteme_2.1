@@ -32,34 +32,33 @@ public class Node extends Thread {
 
     public void insertMessage(Message message) {
         // only internal messages sent by the message sequencer are stored in the history
-    	if (message instanceof InternalMessage) {
-        	history.add((InternalMessage) message);
-        } else {
-        	// only stores external messages sent by the client in the inbox
-        	try {
-        		// attach lamport timestamp to the external message
-        		++ExternalMessage.incrCounter;
-            	message.counter = ExternalMessage.incrCounter;
-            	System.out.println("incrCounter: " + ExternalMessage.incrCounter);
-            	
+            try {	
     			inbox.put(message);
     		} catch (InterruptedException e) {
     			System.out.println("Problem during inserting an external message into the inbox of the node" 
     					+ e.getMessage());
     			e.printStackTrace();
-    		}
-        	
-        }
+    		}    	
     }
 
     public void run() {
-        while (!isInterrupted()) {
-                Message message = this.inbox.poll();
-                if (message != null) {
+        
+    	while (!isInterrupted()) {
+    		Message message = this.inbox.poll();
+            if (message != null) {
+            	if (message instanceof InternalMessage) {
+                    history.add((InternalMessage) message);
+                } else {
+                    // only stores external messages sent by the client in the inbox
+                    // attach lamport timestamp to the external message
+                    ++ExternalMessage.incrCounter;
+                    message.counter = ExternalMessage.incrCounter;
+                    System.out.println("incrCounter: " + ExternalMessage.incrCounter);
                     this.broadcast((ExternalMessage) message);
-                }
 
-        }
+                }
+            }
+    	}
         log();
     }
     

@@ -1,20 +1,17 @@
 package de.tuberlin.cit.lamport;
 
 public class InternalMessage extends Message {
-    	
-	static int nextId = 0;
 	
 	int nodeId;
 
-    public InternalMessage(int counter, int nodeId) {
+    public InternalMessage(int counter, int nodeId, int messageId) {
         this.nodeId = nodeId;
-        this.counter = counter;
-        messageId = nextId;
-        nextId++;
+        this.setCounter(counter);
+        this.setMessageId(messageId);
     }
     
     public String toString() {
-    	return "Lamport timestamp (<counter>,<id>): (" + counter + "," + nodeId + ")";
+    	return "Lamport timestamp (<counter>,<id>): (" + this.getCounter() + "," + nodeId + ")";
     }
 
 }

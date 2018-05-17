@@ -1,4 +1,5 @@
 package de.tuberlin.cit.lamport;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -7,58 +8,87 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 
 public class Node extends Thread {
 	
-    static int nodeCounter = 0;
+    static int nextId = 0;
  
-    LinkedBlockingQueue<Message> inbox = new LinkedBlockingQueue<>();
+    LinkedBlockingDeque<Message> inbox = new LinkedBlockingDeque<>();
     List<InternalMessage> history = new ArrayList<>();
     int nodeId;
     Node[] nodes;
 
     public Node() {
-        this.nodeId = nodeCounter;
-        this.inbox = new LinkedBlockingQueue<>();
-        nodeCounter++;
+        this.nodeId = nextId;
+        this.inbox = new LinkedBlockingDeque<>();
+        nextId++;
     }
 
     public void broadcast(ExternalMessage externalMessage) {
-        InternalMessage intMsg = new InternalMessage(externalMessage.counter, nodeId);
+        InternalMessage intMsg = new InternalMessage(externalMessage.getCounter(), nodeId, externalMessage.getMessageId());
         Arrays.stream(nodes).forEach(node -> node.insertMessage(intMsg));
 
     }
 
     public void insertMessage(Message message) {
-        // only internal messages sent by the message sequencer are stored in the history
-            try {	
-    			inbox.put(message);
-    		} catch (InterruptedException e) {
-    			System.out.println("Problem during inserting an external message into the inbox of the node" 
-    					+ e.getMessage());
-    			e.printStackTrace();
-    		}    	
+            synchronized (inbox) {
+            	// if there is none internal message in the inbox you cannot compare the counters
+            	if (!(inbox.stream().filter(msg -> (msg instanceof InternalMessage)).count() == 0)) {
+            		// if it is an internal message then compare the counters with the last internal message in the inbox
+            		if (message instanceof InternalMessage) {
+                		// iterate from the last to the first element
+            			Iterator<Message> descIter = inbox.descendingIterator();
+                		Message lastIntMsg = null;
+                		while (descIter.hasNext()) {
+                			lastIntMsg = descIter.next();
+                			if (lastIntMsg instanceof InternalMessage) {
+                				break;
+                			}
+                		}
+                		int maxCounter = Math.max(message.getCounter(), lastIntMsg.getCounter());
+                		message.setCounter(maxCounter);
+                	}
+            	} 
+            	
+            	try {	
+        			inbox.putLast(message);
+        		} catch (InterruptedException e) {
+        			System.out.println("Problem during inserting an external message into the inbox of the node" 
+        					+ e.getMessage());
+        			e.printStackTrace();
+        		}   
+			}	
     }
 
     public void run() {
         
     	while (!isInterrupted()) {
-    		Message message = this.inbox.poll();
+    		Message message = null;
+			try {
+				message = this.inbox.takeFirst();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
             if (message != null) {
             	if (message instanceof InternalMessage) {
                     history.add((InternalMessage) message);
                 } else {
-                    // only stores external messages sent by the client in the inbox
-                    // attach lamport timestamp to the external message
-                    ++ExternalMessage.incrCounter;
-                    message.counter = ExternalMessage.incrCounter;
-                    System.out.println("incrCounter: " + ExternalMessage.incrCounter);
-                    this.broadcast((ExternalMessage) message);
+                    // attach lamport timestamp (only counter) to the external message
+                    synchronized (ExternalMessage.getIncrCounter()) {
+                    	ExternalMessage.getIncrCounter().incrementAndGet();
+                        message.setCounter(ExternalMessage.getIncrCounter().get());
+                        System.out.println("incrCounter: " + ExternalMessage.getIncrCounter());
+                        this.broadcast((ExternalMessage) message);
+					}
+                	
 
                 }
+            } else {
+            	System.out.println("Message is null");
             }
     	}
+    	
         log();
     }
     
@@ -68,8 +98,8 @@ public class Node extends Thread {
     		System.err.println("the node did not store 1000 messages in the history");
     	}
     	
-    	MessageComparator comp = new MessageComparator();
-    	history.sort(comp);
+    	//MessageComparator comp = new MessageComparator();
+    	//history.sort(comp);
     	
     	File file = new File("logs/" + Thread.currentThread().getName());
     	

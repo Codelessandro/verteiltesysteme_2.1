@@ -68,7 +68,7 @@ public class App {
 		}
         // interrupting main Thread
         System.out.println("all threads are interrupted. main thread is finishing...");
-        Thread.currentThread().interrupt();
+        System.exit(2);
 
 
     }

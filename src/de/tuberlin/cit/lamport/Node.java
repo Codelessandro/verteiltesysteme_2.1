@@ -26,7 +26,7 @@ public class Node extends Thread {
     }
 
     public void broadcast(ExternalMessage externalMessage) {
-        InternalMessage intMsg = new InternalMessage(externalMessage.getCounter(), nodeId, externalMessage.getMessageId());
+        InternalMessage intMsg = new InternalMessage(externalMessage.counter, nodeId, externalMessage.messageId);
         Arrays.stream(nodes).forEach(node -> node.insertMessage(intMsg));
 
     }
@@ -46,8 +46,8 @@ public class Node extends Thread {
                 				break;
                 			}
                 		}
-                		int maxCounter = Math.max(message.getCounter(), lastIntMsg.getCounter());
-                		message.setCounter(maxCounter);
+                		int maxCounter = Math.max(message.counter, lastIntMsg.counter);
+                		message.counter = maxCounter;
                 	}
             	} 
             	
@@ -66,19 +66,20 @@ public class Node extends Thread {
     	while (!isInterrupted()) {
     		Message message = null;
 			try {
-				message = this.inbox.takeFirst();
+				message = this.inbox.take();
 			} catch (InterruptedException e) {
-				e.printStackTrace();
+				log();
+				
 			}
             if (message != null) {
             	if (message instanceof InternalMessage) {
                     history.add((InternalMessage) message);
                 } else {
                     // attach lamport timestamp (only counter) to the external message
-                    synchronized (ExternalMessage.getIncrCounter()) {
-                    	ExternalMessage.getIncrCounter().incrementAndGet();
-                        message.setCounter(ExternalMessage.getIncrCounter().get());
-                        System.out.println("incrCounter: " + ExternalMessage.getIncrCounter());
+                    synchronized (ExternalMessage.incrCounter) {
+                    	int counter = ExternalMessage.incrCounter.incrementAndGet();
+                        message.counter = counter;
+                        System.out.println("incrCounter: " + counter);
                         this.broadcast((ExternalMessage) message);
 					}
                 	
@@ -88,8 +89,7 @@ public class Node extends Thread {
             	System.out.println("Message is null");
             }
     	}
-    	
-        log();
+    		
     }
     
     public void log() {
@@ -98,10 +98,12 @@ public class Node extends Thread {
     		System.err.println("the node did not store 1000 messages in the history");
     	}
     	
+    	System.err.println(history.size());
+    	
     	//MessageComparator comp = new MessageComparator();
     	//history.sort(comp);
     	
-    	File file = new File("logs/" + Thread.currentThread().getName());
+    	File file = new File("lamportLogs/" + Thread.currentThread().getName());
     	
     	try (FileOutputStream fileOut = new FileOutputStream(file);
     		 ObjectOutputStream out = new ObjectOutputStream(fileOut);) {

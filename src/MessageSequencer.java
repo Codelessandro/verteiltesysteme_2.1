@@ -1,5 +1,4 @@
 import java.util.Arrays;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class MessageSequencer extends Thread {

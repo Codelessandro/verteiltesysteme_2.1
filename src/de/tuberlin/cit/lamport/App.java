@@ -25,7 +25,7 @@ public class App {
         
         Client client = new Client(nrMessages, nodeList);
         
-        File rootDir = new File("logs");
+        File rootDir = new File("lamportLogs");
         rootDir.mkdir();
         
 
@@ -35,7 +35,7 @@ public class App {
 
 
         try {
-            Thread.sleep(10000);
+            Thread.sleep(2000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

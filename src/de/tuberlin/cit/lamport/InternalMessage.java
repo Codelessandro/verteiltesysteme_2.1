@@ -6,12 +6,12 @@ public class InternalMessage extends Message {
 
     public InternalMessage(int counter, int nodeId, int messageId) {
         this.nodeId = nodeId;
-        this.setCounter(counter);
-        this.setMessageId(messageId);
+        this.counter = counter;
+        this.messageId = messageId;
     }
     
     public String toString() {
-    	return "Lamport timestamp (<counter>,<id>): (" + this.getCounter() + "," + nodeId + ")";
+    	return "Lamport timestamp (<counter>,<id>): (" + this.counter + "," + nodeId + ")";
     }
 
 }

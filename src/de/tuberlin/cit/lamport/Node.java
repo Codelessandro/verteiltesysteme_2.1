@@ -10,27 +10,56 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingDeque;
 
+/**
+ * - node possesses an inbox queue where internal and external messages are stored
+ * - internal messages from the history are written in Thread-specific log files
+ * @author Christian Mischok
+ *
+ */
 public class Node extends Thread {
 	
-    static int nextId = 0;
- 
-    LinkedBlockingDeque<Message> inbox = new LinkedBlockingDeque<>();
-    List<InternalMessage> history = new ArrayList<>();
-    int nodeId;
-    Node[] nodes;
+    private static int nextId = 0;
+    // using deque because of iterating backwards
+    private LinkedBlockingDeque<Message> inbox = new LinkedBlockingDeque<>();
+    // every node has history for storing broadcastet internal messages
+    private List<InternalMessage> history = new ArrayList<>();
+    // corresponds to the id of the lamport timestamp
+    private int nodeId;
+    private Node[] nodes;
 
-    public Node() {
+	public Node() {
         this.nodeId = nextId;
         this.inbox = new LinkedBlockingDeque<>();
         nextId++;
     }
+	
+	public void setNodes(Node[] nodes) {
+		this.nodes = nodes;
+	}
+	
+	public int getNodeId() {
+		return this.nodeId; 
+	}
 
+	/**
+	 * - external messages are converted into internal messages
+	 * - internal messages are broadcastet to all other nodes
+	 * 
+	 * @param externalMessage
+	 */
     public void broadcast(ExternalMessage externalMessage) {
-        InternalMessage intMsg = new InternalMessage(externalMessage.counter, nodeId, externalMessage.messageId);
+        InternalMessage intMsg = new InternalMessage(
+        		externalMessage.getCounter(), this.getNodeId(), externalMessage.getMessageId());
         Arrays.stream(nodes).forEach(node -> node.insertMessage(intMsg));
 
     }
-
+    
+    /**
+     * - inbox is synchronized because multiple nodes store concurrently external and 
+     *   internal messages in the inbox (read and write operation are performed on the inbox)
+     * - compares the counter of the last internal message with the current internal message to compute the maximum
+     * @param message
+     */
     public void insertMessage(Message message) {
             synchronized (inbox) {
             	// if there is none internal message in the inbox you cannot compare the counters
@@ -46,8 +75,8 @@ public class Node extends Thread {
                 				break;
                 			}
                 		}
-                		int maxCounter = Math.max(message.counter, lastIntMsg.counter);
-                		message.counter = maxCounter;
+                		int maxCounter = Math.max(message.getCounter(), lastIntMsg.getCounter());
+                		message.setCounter(maxCounter);
                 	}
             	} 
             	
@@ -61,24 +90,30 @@ public class Node extends Thread {
 			}	
     }
 
+    /**
+     * - polls continuously messages and depending on the message type it perform further operations:
+     * 		- external message: attaches the lamport timestamp and gets broadcastet to other nodes
+     * 		- internal message: stores it in the history of the node
+     * - counter has to be synchronized because multiple nodes read and increment the static counter (race conditions)
+     */
     public void run() {
         
     	while (!isInterrupted()) {
     		Message message = null;
 			try {
-				message = this.inbox.take();
+				message = this.inbox.takeFirst();
 			} catch (InterruptedException e) {
+				// invokes log after interrupting the nodes
 				log();
-				
 			}
             if (message != null) {
             	if (message instanceof InternalMessage) {
                     history.add((InternalMessage) message);
                 } else {
                     // attach lamport timestamp (only counter) to the external message
-                    synchronized (ExternalMessage.incrCounter) {
-                    	int counter = ExternalMessage.incrCounter.incrementAndGet();
-                        message.counter = counter;
+                    synchronized (ExternalMessage.getIncrCounter()) {
+                    	int counter = ExternalMessage.getIncrCounter().incrementAndGet();
+                        message.setCounter(counter);
                         System.out.println("incrCounter: " + counter);
                         this.broadcast((ExternalMessage) message);
 					}
@@ -92,16 +127,12 @@ public class Node extends Thread {
     		
     }
     
+    /**
+     * - writes the whole history into a node-specific log file
+     */
     public void log() {
     	
-    	if (!(history.size() == 1000)) {
-    		System.err.println("the node did not store 1000 messages in the history");
-    	}
-    	
-    	System.err.println(history.size());
-    	
-    	//MessageComparator comp = new MessageComparator();
-    	//history.sort(comp);
+    	System.err.println("history size: " + history.size());
     	
     	File file = new File("lamportLogs/" + Thread.currentThread().getName());
     	

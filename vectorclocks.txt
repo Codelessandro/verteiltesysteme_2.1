@@ -1,8 +1,9 @@
 A.) explain vector clocks in general
 B.) changes in implementation
+
 1.) What kind of order would be implied by the vector clocks (total order/partial order)?
 2.) Would the history of all threads be identical? If not, how would you test that the exposed histories of the threads are correct.
-3.) What are the advantages/disadvantages of using Lamport Timestamps or vector clocks?
+3.) What are the advantages/disadvantages of using (Lamport Timestamps or vector clocks)?
 
 
 
@@ -10,7 +11,7 @@ Answers:
 A.)
 >counter is replaced with array of counters (each process has one counter)
 >only the own counter is incremented when new message is inserted(!)
->received new message: maximum is made elementwise (over the whole array)
+>received new message: maximum is made elementwise - and only incremeneted at the node where the message is inserted
 
 B.)
 > each message gets VectorClock instead of Counter
@@ -18,8 +19,16 @@ B.)
 
 
 
-1.) partial order
-2.) no, because it is partially ordered - test: can't be tested(?) //TODO
+1.) partial order - for example: (1,0,0) (0,1,0)
+2.) no, because it is partially ordered -  see above (1,0,0) - (0,1,0)
 3.)
->advantages: independent of physical time stamp that varies from time to time
->disadvantages: only logical order, not really according to physical time -> some events can't be ordered or have to be ordered according to their process id (stupid!)
+
+
+lamport (with total order):
+-  not able to really determine order (since events can be ordered due to nodes)
+- L(e1) < L(e2) =not> e1 -> e2
+= total
+
+vector clock:
++ V(e1) < V(e2) => e1 -> e2
+= partial
